@@ -1,1 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GBA Emulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+<h1>Play Your GBA Game</h1>
+
+<input type="file" id="romLoader" accept=".gba" />
+<div id="game"></div>
+
+<script src="emulator/emulator.min.js"></script>
+<script>
+document.getElementById("romLoader").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  const blobUrl = URL.createObjectURL(file);
+
+  new EJS({
+    gameUrl: blobUrl,
+    system: "gba",
+    element: document.getElementById("game"),
+    saveState: true
+  });
+});
+</script>
+
+</body>
+</html>
