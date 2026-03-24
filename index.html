@@ -2,33 +2,15 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>GBA Emulator</title>
+  <title>ixl is a fat peice of sh*t</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <h1>Play Your GBA Game</h1>
-
-  <input type="file" id="romLoader" accept=".gba">
+  <h1>the fun place</h1>
+  
   <div id="game"></div>
 
-  <!-- EmulatorJS file -->
-  <script src="emulator.min.js"></script>
-
-  <script>
-    document.getElementById("romLoader").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const blobUrl = URL.createObjectURL(file);
-
-      new EJS({
-        gameUrl: blobUrl,
-        system: "gba",
-        element: document.getElementById("game"),
-        saveState: true
-      });
-    });
   </script>
 
 </body>
