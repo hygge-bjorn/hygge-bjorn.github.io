@@ -2,11 +2,44 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>IXL sucks big time</title>
-  <link rel="stylesheet" href="style.css">
+  <title>NES Emulator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    p {
+      font-family: 'Helvetica Neue', serif;
+      font-size: 48px;
+      color: white;
+      margin: 0 0 30px 0;
+    }
+
+    @keyframes gradient {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+  </style>
 </head>
 <body>
-  <p>GBC Emu</p>
+  <p>NES Emulator</p>
 
   <div style='width:640px;height:480px;max-width:100%'>
     <div id='game'></div>
@@ -14,7 +47,7 @@
 
   <script type='text/javascript'>
     EJS_player = '#game';
-    EJS_core = 'gbc';
+    EJS_core = 'nes';
     EJS_lightgun = false;
     EJS_biosUrl = '';
     // Set your game ROM URL here
