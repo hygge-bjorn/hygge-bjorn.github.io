@@ -13,19 +13,14 @@ body{
     color:black;
     font-family:Arial;
     text-align:center;
-    margin:0;
-    padding:0;
-}
-
-#top{
-    margin-top:10px;
 }
 
 #game{
     width:800px;
     height:600px;
     margin:auto;
-    margin-top:20px;
+    border:4px solid black;
+    background:black;
 }
 
 button,input{
@@ -36,18 +31,16 @@ button,input{
 </head>
 <body>
 
-<div id="top">
-
 <img
 src="https://media.tenor.com/qybTL4kI0CIAAAAC/dancing-bear.gif"
-width="150"
-alt="bear">
+width="150">
 
 <h2>Bear Emulator</h2>
 
-</div>
-
-<input type="file" id="romUpload" accept=".gba,.gb,.gbc">
+<input
+type="file"
+id="romUpload"
+accept=".gba,.gb,.gbc">
 
 <br>
 
@@ -55,7 +48,12 @@ alt="bear">
 Download .sav
 </button>
 
-<input type="file" id="savUpload" accept=".sav">
+<input
+type="file"
+id="savUpload"
+accept=".sav">
+
+<br><br>
 
 <div id="game"></div>
 
