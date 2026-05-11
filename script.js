@@ -1,91 +1,84 @@
-let currentSave = null;
+document.addEventListener("keydown", function(e) {
 
-document
-.getElementById("romUpload")
-.addEventListener("change", async (e) => {
+    if (!window.EJS_emulator) return;
 
-    const file = e.target.files[0];
+    switch(e.code) {
 
-    if (!file) return;
+        // D-PAD
+        case "ArrowUp":
+            EJS_emulator.setButton("up", true);
+            break;
 
-    const arrayBuffer = await file.arrayBuffer();
+        case "ArrowDown":
+            EJS_emulator.setButton("down", true);
+            break;
 
-    const romData = new Uint8Array(arrayBuffer);
+        case "ArrowLeft":
+            EJS_emulator.setButton("left", true);
+            break;
 
-    let core = "gba";
+        case "ArrowRight":
+            EJS_emulator.setButton("right", true);
+            break;
 
-    if (file.name.endsWith(".gb")) {
-        core = "gb";
+        // A / B
+        case "KeyZ":
+            EJS_emulator.setButton("a", true);
+            break;
+
+        case "KeyX":
+            EJS_emulator.setButton("b", true);
+            break;
+
+        // Start / Select
+        case "Enter":
+            EJS_emulator.setButton("start", true);
+            break;
+
+        case "ShiftLeft":
+        case "ShiftRight":
+            EJS_emulator.setButton("select", true);
+            break;
     }
-
-    if (file.name.endsWith(".gbc")) {
-        core = "gb";
-    }
-
-    document.getElementById("game").innerHTML = "";
-
-    window.EJS_player = "#game";
-    window.EJS_core = core;
-    window.EJS_pathtodata =
-    "https://cdn.emulatorjs.org/stable/data/";
-    window.EJS_gameData = romData;
-
-    const script = document.createElement("script");
-
-    script.src =
-    "https://cdn.emulatorjs.org/stable/data/loader.js";
-
-    document.body.appendChild(script);
 });
 
-window.EJS_onSaveUpdate = function(saveData){
+document.addEventListener("keyup", function(e) {
 
-    currentSave = saveData;
-};
+    if (!window.EJS_emulator) return;
 
-function downloadSav(){
+    switch(e.code) {
 
-    if(!currentSave){
-        alert("No save yet.");
-        return;
+        case "ArrowUp":
+            EJS_emulator.setButton("up", false);
+            break;
+
+        case "ArrowDown":
+            EJS_emulator.setButton("down", false);
+            break;
+
+        case "ArrowLeft":
+            EJS_emulator.setButton("left", false);
+            break;
+
+        case "ArrowRight":
+            EJS_emulator.setButton("right", false);
+            break;
+
+        case "KeyZ":
+            EJS_emulator.setButton("a", false);
+            break;
+
+        case "KeyX":
+            EJS_emulator.setButton("b", false);
+            break;
+
+        case "Enter":
+            EJS_emulator.setButton("start", false);
+            break;
+
+        case "ShiftLeft":
+        case "ShiftRight":
+            EJS_emulator.setButton("select", false);
+            break;
     }
-
-    const blob = new Blob(
-        [currentSave],
-        {
-            type:"application/octet-stream"
-        }
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-
-    a.download = "game.sav";
-
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-document
-.getElementById("savUpload")
-.addEventListener("change", async (e)=>{
-
-    const file = e.target.files[0];
-
-    if(!file) return;
-
-    const buffer = await file.arrayBuffer();
-
-    const saveArray = new Uint8Array(buffer);
-
-    localStorage.setItem(
-        "EJS_SAVE",
-        JSON.stringify(Array.from(saveArray))
-    );
-
-    alert("Save uploaded. Reload ROM.");
 });
