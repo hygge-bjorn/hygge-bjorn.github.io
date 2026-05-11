@@ -1,12 +1,6 @@
 let currentSave = null;
 
-document
-.getElementById("romUpload")
-.addEventListener("change", async (e) => {
-
-    const file = e.target.files[0];
-
-    if (!file) return;
+async function startEmulator(file){
 
     const arrayBuffer = await file.arrayBuffer();
 
@@ -14,48 +8,69 @@ document
 
     let core = "gba";
 
-    // Detect GB/GBC
-    if (file.name.endsWith(".gb")) {
+    if(file.name.endsWith(".gb")){
         core = "gb";
     }
 
-    if (file.name.endsWith(".gbc")) {
+    if(file.name.endsWith(".gbc")){
         core = "gb";
     }
 
-    // Clear previous emulator
+    // CLEAR OLD SCREEN
     document.getElementById("game").innerHTML = "";
 
-    // EmulatorJS settings
+    // REMOVE OLD LOADER
+    const oldLoader =
+    document.getElementById("ejsloader");
+
+    if(oldLoader){
+        oldLoader.remove();
+    }
+
+    // EMULATOR CONFIG
     window.EJS_player = "#game";
 
     window.EJS_core = core;
 
-    // LOCAL DATA FOLDER
     window.EJS_pathtodata = "./data/";
 
     window.EJS_gameData = romData;
 
-    // Save callback
+    // SAVE CALLBACK
     window.EJS_onSaveUpdate = function(saveData){
 
         currentSave = saveData;
     };
 
-    // Load emulator
-    const script = document.createElement("script");
+    // LOAD LOADER.JS
+    const script =
+    document.createElement("script");
+
+    script.id = "ejsloader";
 
     script.src = "./data/loader.js";
 
     document.body.appendChild(script);
+}
+
+// ROM UPLOAD
+document
+.getElementById("romUpload")
+.addEventListener("change", function(e){
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    startEmulator(file);
 });
 
-// DOWNLOAD .SAV
+// DOWNLOAD SAVE
 function downloadSav(){
 
     if(!currentSave){
 
-        alert("No save found yet.");
+        alert("No save found.");
 
         return;
     }
@@ -67,9 +82,11 @@ function downloadSav(){
         }
     );
 
-    const url = URL.createObjectURL(blob);
+    const url =
+    URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
+    const a =
+    document.createElement("a");
 
     a.href = url;
 
@@ -80,109 +97,29 @@ function downloadSav(){
     URL.revokeObjectURL(url);
 }
 
-// UPLOAD .SAV
+// UPLOAD SAVE
 document
 .getElementById("savUpload")
-.addEventListener("change", async (e)=>{
+.addEventListener("change", async function(e){
 
     const file = e.target.files[0];
 
     if(!file) return;
 
-    const buffer = await file.arrayBuffer();
+    const buffer =
+    await file.arrayBuffer();
 
-    const saveArray = new Uint8Array(buffer);
+    const saveArray =
+    new Uint8Array(buffer);
 
-    // Store save locally
     localStorage.setItem(
         "EJS_SAVE",
-        JSON.stringify(Array.from(saveArray))
+        JSON.stringify(
+            Array.from(saveArray)
+        )
     );
 
     alert(
         "Save uploaded. Reload ROM."
     );
-});
-
-// CUSTOM CONTROLS
-document.addEventListener("keydown", function(e){
-
-    if(!window.EJS_emulator) return;
-
-    switch(e.code){
-
-        case "ArrowUp":
-            EJS_emulator.setButton("up", true);
-            break;
-
-        case "ArrowDown":
-            EJS_emulator.setButton("down", true);
-            break;
-
-        case "ArrowLeft":
-            EJS_emulator.setButton("left", true);
-            break;
-
-        case "ArrowRight":
-            EJS_emulator.setButton("right", true);
-            break;
-
-        case "KeyZ":
-            EJS_emulator.setButton("a", true);
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton("b", true);
-            break;
-
-        case "Enter":
-            EJS_emulator.setButton("start", true);
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton("select", true);
-            break;
-    }
-});
-
-document.addEventListener("keyup", function(e){
-
-    if(!window.EJS_emulator) return;
-
-    switch(e.code){
-
-        case "ArrowUp":
-            EJS_emulator.setButton("up", false);
-            break;
-
-        case "ArrowDown":
-            EJS_emulator.setButton("down", false);
-            break;
-
-        case "ArrowLeft":
-            EJS_emulator.setButton("left", false);
-            break;
-
-        case "ArrowRight":
-            EJS_emulator.setButton("right", false);
-            break;
-
-        case "KeyZ":
-            EJS_emulator.setButton("a", false);
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton("b", false);
-            break;
-
-        case "Enter":
-            EJS_emulator.setButton("start", false);
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton("select", false);
-            break;
-    }
 });
