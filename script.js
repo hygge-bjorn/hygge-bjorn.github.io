@@ -1,84 +1,71 @@
-document.addEventListener("keydown", function(e) {
+let currentSave = null;
 
-    if (!window.EJS_emulator) return;
+document
+.getElementById("romUpload")
+.addEventListener("change", async (e) => {
 
-    switch(e.code) {
+    const file = e.target.files[0];
 
-        // D-PAD
-        case "ArrowUp":
-            EJS_emulator.setButton("up", true);
-            break;
+    if (!file) return;
 
-        case "ArrowDown":
-            EJS_emulator.setButton("down", true);
-            break;
+    const arrayBuffer = await file.arrayBuffer();
 
-        case "ArrowLeft":
-            EJS_emulator.setButton("left", true);
-            break;
+    const romData = new Uint8Array(arrayBuffer);
 
-        case "ArrowRight":
-            EJS_emulator.setButton("right", true);
-            break;
+    let core = "gba";
 
-        // A / B
-        case "KeyZ":
-            EJS_emulator.setButton("a", true);
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton("b", true);
-            break;
-
-        // Start / Select
-        case "Enter":
-            EJS_emulator.setButton("start", true);
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton("select", true);
-            break;
+    if (file.name.endsWith(".gb")) {
+        core = "gb";
     }
+
+    if (file.name.endsWith(".gbc")) {
+        core = "gb";
+    }
+
+    // EmulatorJS setup
+    window.EJS_player = "#game";
+    window.EJS_core = core;
+    window.EJS_pathtodata =
+    "https://cdn.emulatorjs.org/stable/data/";
+    window.EJS_gameData = romData;
+
+    // Save callback
+    window.EJS_onSaveUpdate = function(saveData){
+        currentSave = saveData;
+    };
+
+    // LOAD EMULATOR
+    const script = document.createElement("script");
+
+    script.src =
+    "https://cdn.emulatorjs.org/stable/data/loader.js";
+
+    document.body.appendChild(script);
 });
 
-document.addEventListener("keyup", function(e) {
+function downloadSav(){
 
-    if (!window.EJS_emulator) return;
-
-    switch(e.code) {
-
-        case "ArrowUp":
-            EJS_emulator.setButton("up", false);
-            break;
-
-        case "ArrowDown":
-            EJS_emulator.setButton("down", false);
-            break;
-
-        case "ArrowLeft":
-            EJS_emulator.setButton("left", false);
-            break;
-
-        case "ArrowRight":
-            EJS_emulator.setButton("right", false);
-            break;
-
-        case "KeyZ":
-            EJS_emulator.setButton("a", false);
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton("b", false);
-            break;
-
-        case "Enter":
-            EJS_emulator.setButton("start", false);
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton("select", false);
-            break;
+    if(!currentSave){
+        alert("No save found.");
+        return;
     }
-});
+
+    const blob = new Blob(
+        [currentSave],
+        {
+            type:"application/octet-stream"
+        }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+
+    a.href = url;
+
+    a.download = "game.sav";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
