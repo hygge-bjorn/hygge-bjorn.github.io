@@ -1,60 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>GBC Emulator</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-      background-size: 400% 400%;
-      animation: gradient 15s ease infinite;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    p {
-      font-family: 'Helvetica Neue', serif;
-      font-size: 48px;
-      color: white;
-      margin: 0 0 30px 0;
-    }
+<title>Bear Emulator</title>
 
-    @keyframes gradient {
-      0% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
-    }
-  </style>
+<style>
+
+body{
+    background:white;
+    color:black;
+    font-family:Arial;
+    text-align:center;
+    margin:0;
+    padding:0;
+}
+
+#top{
+    margin-top:10px;
+}
+
+#game{
+    width:800px;
+    height:600px;
+    margin:auto;
+    margin-top:20px;
+}
+
+button,input{
+    margin:5px;
+}
+
+</style>
 </head>
 <body>
-  <p>GBC Emulator</p>
 
-  <div style='width:640px;height:480px;max-width:100%'>
-    <div id='game'></div>
-  </div>
+<div id="top">
 
-  <script type='text/javascript'>
-    EJS_player = '#game';
-    EJS_core = 'gbc';
-    EJS_lightgun = false;
-    EJS_biosUrl = '';
-    // Set your game ROM URL here
-    EJS_gameUrl = 'https://www.dropbox.com/scl/fi/qw99rypdjksfo6uiuwvux/009-Pokemon-Silver-Version.gbc?rlkey=vtf3qib02d1kq5aorbk1ygfya&amp;dl=0';
-    EJS_pathtodata = 'data/';
-  </script>
-  <script src='data/loader.js'></script>
+<img
+src="https://media.tenor.com/qybTL4kI0CIAAAAC/dancing-bear.gif"
+width="150"
+alt="bear">
+
+<h2>Bear Emulator</h2>
+
+</div>
+
+<input type="file" id="romUpload" accept=".gba,.gb,.gbc">
+
+<br>
+
+<button onclick="downloadSav()">
+Download .sav
+</button>
+
+<input type="file" id="savUpload" accept=".sav">
+
+<div id="game"></div>
+
+<script src="script.js"></script>
 
 </body>
 </html>
