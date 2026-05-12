@@ -9,8 +9,10 @@ function core(name){
 name = name.toLowerCase();
 
 if(name.endsWith(".gba")) return "gba";
+
 if(name.endsWith(".gb")) return "gb";
-if(name.endsWith(".gbc")) return "gb";
+
+if(name.endsWith(".gbc")) return "gbc";
 
 return null;
 }
@@ -67,11 +69,10 @@ window.EJS_gameName = game;
 
 window.EJS_gameUrl = blobUrl;
 
-// IMPORTANT FIX
 window.EJS_pathtodata =
 "https://cdn.emulatorjs.org/stable/data/";
 
-// SAVE LOAD
+// load save
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -95,7 +96,7 @@ new Blob([bytes])
 }catch(e){}
 }
 
-// SAVE STORE
+// save handler
 window.EJS_onSaveSRAM =
 data=>{
 
@@ -117,10 +118,20 @@ r.result.split(",")[1]
 r.readAsDataURL(data);
 };
 
+// iphone safari fixes
+window.EJS_startOnLoaded = true;
+
+window.EJS_color = "#000";
+
+window.EJS_volume = 1;
+
+window.EJS_defaultOptions = {
+fullscreenOnLoad:false
+};
+
 const script =
 document.createElement("script");
 
-// IMPORTANT FIX
 script.src =
 "https://cdn.emulatorjs.org/stable/data/loader.js";
 
@@ -140,11 +151,13 @@ document.body.appendChild(script);
 reader.readAsArrayBuffer(file);
 }
 
+// ROM picker
 rom.onchange =
 e=>load(
 e.target.files[0]
 );
 
+// drag/drop
 document.body.ondragover =
 e=>e.preventDefault();
 
@@ -157,6 +170,7 @@ e.dataTransfer.files[0]
 );
 };
 
+// upload save
 sav.onchange = ()=>{
 
 if(!game){
@@ -196,6 +210,7 @@ alert("Bad save");
 r.readAsDataURL(file);
 };
 
+// download save
 function downloadSav(){
 
 if(!game){
@@ -230,6 +245,7 @@ game + ".sav";
 a.click();
 }
 
+// fullscreen
 function fullscreen(){
 
 const g =
