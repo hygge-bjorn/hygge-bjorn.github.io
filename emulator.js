@@ -1,9 +1,7 @@
-<script>
 const rom = document.getElementById("rom");
 const sav = document.getElementById("sav");
 
 let game = "";
-let loading = false;
 let blobUrl = null;
 
 function core(name){
@@ -19,10 +17,8 @@ return null;
 
 function clean(){
 
-try{
-
 const old =
-document.getElementById("ejs");
+document.getElementById("emulatorjs");
 
 if(old) old.remove();
 
@@ -35,21 +31,9 @@ URL.revokeObjectURL(blobUrl);
 
 blobUrl = null;
 }
-
-delete window.EJS_player;
-delete window.EJS_gameUrl;
-delete window.EJS_core;
-delete window.EJS_gameName;
-delete window.EJS_pathtodata;
-delete window.EJS_loadStateURL;
-delete window.EJS_onSaveSRAM;
-
-}catch(e){}
 }
 
 function load(file){
-
-if(loading) return;
 
 if(!file) return;
 
@@ -62,73 +46,32 @@ alert("Unsupported ROM");
 return;
 }
 
-loading = true;
-
 game = file.name;
 
 clean();
 
-const r = new FileReader();
+const reader = new FileReader();
 
-r.onerror = ()=>{
-
-loading = false;
-
-alert("ROM read failed");
-};
-
-r.onload = ()=>{
-
-try{
+reader.onload = ()=>{
 
 blobUrl =
 URL.createObjectURL(
-new Blob([r.result])
+new Blob([reader.result])
 );
 
 window.EJS_player = "#game";
 
-window.EJS_gameUrl =
-blobUrl;
-
 window.EJS_core = c;
 
-window.EJS_gameName =
-game;
+window.EJS_gameName = game;
 
+window.EJS_gameUrl = blobUrl;
+
+// IMPORTANT FIX
 window.EJS_pathtodata =
 "https://cdn.emulatorjs.org/stable/data/";
 
-window.EJS_startOnLoaded =
-true;
-
-// SAVE HANDLER
-window.EJS_onSaveSRAM =
-data=>{
-
-try{
-
-const sr =
-new FileReader();
-
-sr.onload = ()=>{
-
-try{
-
-localStorage.setItem(
-game + ".sav",
-sr.result.split(",")[1]
-);
-
-}catch(e){}
-};
-
-sr.readAsDataURL(data);
-
-}catch(e){}
-};
-
-// LOAD SAVE
+// SAVE LOAD
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -152,48 +95,56 @@ new Blob([bytes])
 }catch(e){}
 }
 
-// LOAD EMULATORJS
-const s =
+// SAVE STORE
+window.EJS_onSaveSRAM =
+data=>{
+
+const r =
+new FileReader();
+
+r.onload = ()=>{
+
+try{
+
+localStorage.setItem(
+game + ".sav",
+r.result.split(",")[1]
+);
+
+}catch(e){}
+};
+
+r.readAsDataURL(data);
+};
+
+const script =
 document.createElement("script");
 
-s.id = "ejs";
+// IMPORTANT FIX
+script.src =
+"https://cdn.emulatorjs.org/stable/data/loader.js";
 
-s.src =
-"https://cdn.emulatorjs.org/stable/data/loader.js?v="
-+ Date.now();
+script.id =
+"emulatorjs";
 
-s.onload = ()=>{
+script.onerror = ()=>{
 
-loading = false;
+alert(
+"Could not load EmulatorJS"
+);
 };
 
-s.onerror = ()=>{
-
-loading = false;
-
-alert("Core load failed");
+document.body.appendChild(script);
 };
 
-document.body.appendChild(s);
-
-}catch(e){
-
-loading = false;
-
-alert("Emulator crashed");
-}
-};
-
-r.readAsArrayBuffer(file);
+reader.readAsArrayBuffer(file);
 }
 
-// ROM INPUT
 rom.onchange =
 e=>load(
 e.target.files[0]
 );
 
-// DRAG DROP
 document.body.ondragover =
 e=>e.preventDefault();
 
@@ -206,7 +157,6 @@ e.dataTransfer.files[0]
 );
 };
 
-// SAVE UPLOAD
 sav.onchange = ()=>{
 
 if(!game){
@@ -216,11 +166,13 @@ alert("Load ROM first");
 return;
 }
 
-const f = sav.files[0];
+const file =
+sav.files[0];
 
-if(!f) return;
+if(!file) return;
 
-const r = new FileReader();
+const r =
+new FileReader();
 
 r.onload = ()=>{
 
@@ -241,15 +193,9 @@ alert("Bad save");
 }
 };
 
-r.onerror = ()=>{
-
-alert("Save read failed");
+r.readAsDataURL(file);
 };
 
-r.readAsDataURL(f);
-};
-
-// SAVE DOWNLOAD
 function downloadSav(){
 
 if(!game){
@@ -284,23 +230,13 @@ game + ".sav";
 a.click();
 }
 
-// FULLSCREEN
 function fullscreen(){
 
 const g =
 document.getElementById("game");
 
-if(
-g.requestFullscreen
-){
+if(g.requestFullscreen){
+
 g.requestFullscreen();
 }
 }
-
-// ERROR PROTECTION
-window.onerror =
-()=>true;
-
-window.onunhandledrejection =
-()=>true;
-</script>
