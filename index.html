@@ -1,27 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Retro Emulator Hub</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Huggy Bjorn Emulator</title>
+
+<style>
+
+body{
+    background:white;
+    color:black;
+    font-family:Arial;
+    text-align:center;
+    margin:0;
+    padding:20px;
+}
+
+img{
+    margin-bottom:10px;
+}
+
+#game{
+    width:800px;
+    height:600px;
+    margin:auto;
+    background:black;
+    border:4px solid black;
+}
+
+button,
+input{
+    margin:5px;
+    padding:5px;
+}
+
+#controls{
+    margin-top:10px;
+    font-size:14px;
+}
+
+</style>
 </head>
 <body>
 
-  <h1>Retro Emulator Hub</h1>
+<img
+src="https://media.tenor.com/qybTL4kI0CIAAAAC/dancing-bear.gif"
+width="150"
+alt="Dancing Bear">
 
-  <input type="file" id="romInput" accept=".gb,.gbc,.gba,.nds" />
+<h2>Huggy Bjorn Emulator</h2>
 
-  <div id="dropZone">
-    Drop ROM here
-  </div>
+<input
+type="file"
+id="romUpload"
+accept=".gba,.gb,.gbc">
 
-  <div id="screen"></div>
+<br>
 
-  <!-- EmulatorJS loader -->
-  <script src="https://cdn.emulatorjs.org/latest/data/loader.js"></script>
+<button id="downloadSaveBtn">
+Download .sav
+</button>
 
-  <!-- Your logic -->
-  <script src="emulator.js"></script>
+<input
+type="file"
+id="savUpload"
+accept=".sav">
+
+<div id="controls">
+
+Z = A |
+X = B |
+ENTER = START |
+SHIFT = SELECT |
+ARROWS = MOVE
+
+</div>
+
+<br>
+
+<div id="game"></div>
+
+<script src="script.js"></script>
 
 </body>
 </html>
