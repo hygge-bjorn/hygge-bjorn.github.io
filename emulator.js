@@ -8,29 +8,37 @@ function core(name){
 
 name = name.toLowerCase();
 
-if(name.endsWith(".gba")) return "gba";
+// GBA
+if(name.endsWith(".gba")){
+window.EJS_core = "gba";
+return "gba";
+}
 
-if(name.endsWith(".gb")) return "gb";
+// GB
+if(name.endsWith(".gb")){
+window.EJS_core = "gb";
+return "gb";
+}
 
-if(name.endsWith(".gbc")) return "gbc";
+// GBC (FIXED)
+if(name.endsWith(".gbc")){
+window.EJS_core = "gb";
+window.EJS_forceLegacyCores = true;
+return "gb";
+}
 
 return null;
 }
 
 function clean(){
 
-const old =
-document.getElementById("emulatorjs");
-
+const old = document.getElementById("emulatorjs");
 if(old) old.remove();
 
-document.getElementById("game")
-.innerHTML = "";
+document.getElementById("game").innerHTML = "";
 
 if(blobUrl){
-
 URL.revokeObjectURL(blobUrl);
-
 blobUrl = null;
 }
 }
@@ -42,9 +50,7 @@ if(!file) return;
 const c = core(file.name);
 
 if(!c){
-
 alert("Unsupported ROM");
-
 return;
 }
 
@@ -56,94 +62,46 @@ const reader = new FileReader();
 
 reader.onload = ()=>{
 
-blobUrl =
-URL.createObjectURL(
-new Blob([reader.result])
-);
+blobUrl = URL.createObjectURL(new Blob([reader.result]));
 
 window.EJS_player = "#game";
-
-window.EJS_core = c;
-
+window.EJS_gameUrl = blobUrl;
 window.EJS_gameName = game;
 
-window.EJS_gameUrl = blobUrl;
-
+// IMPORTANT FIX FOR GBC CORE LOADING
 window.EJS_pathtodata =
 "https://cdn.emulatorjs.org/stable/data/";
 
-// load save
-const existing =
-localStorage.getItem(
-game + ".sav"
-);
+window.EJS_forceLegacyCores = true;
+window.EJS_startOnLoaded = true;
+
+// SAVE LOAD
+const existing = localStorage.getItem(game + ".sav");
 
 if(existing){
-
 try{
-
-const bytes =
-Uint8Array.from(
-atob(existing),
-c=>c.charCodeAt(0)
-);
-
-window.EJS_loadStateURL =
-URL.createObjectURL(
-new Blob([bytes])
-);
-
+const bytes = Uint8Array.from(atob(existing),c=>c.charCodeAt(0));
+window.EJS_loadStateURL = URL.createObjectURL(new Blob([bytes]));
 }catch(e){}
 }
 
-// save handler
-window.EJS_onSaveSRAM =
-data=>{
-
-const r =
-new FileReader();
-
+// SAVE WRITE
+window.EJS_onSaveSRAM = data=>{
+const r = new FileReader();
 r.onload = ()=>{
-
 try{
-
-localStorage.setItem(
-game + ".sav",
-r.result.split(",")[1]
-);
-
+localStorage.setItem(game + ".sav", r.result.split(",")[1]);
 }catch(e){}
 };
-
 r.readAsDataURL(data);
 };
 
-// iphone safari fixes
-window.EJS_startOnLoaded = true;
+// LOAD EMULATOR
+const script = document.createElement("script");
+script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+script.id = "emulatorjs";
 
-window.EJS_color = "#000";
-
-window.EJS_volume = 1;
-
-window.EJS_defaultOptions = {
-fullscreenOnLoad:false
-};
-
-const script =
-document.createElement("script");
-
-script.src =
-"https://cdn.emulatorjs.org/stable/data/loader.js";
-
-script.id =
-"emulatorjs";
-
-script.onerror = ()=>{
-
-alert(
-"Could not load EmulatorJS"
-);
-};
+script.onerror = ()=>alert("Core load failed");
 
 document.body.appendChild(script);
 };
@@ -151,58 +109,30 @@ document.body.appendChild(script);
 reader.readAsArrayBuffer(file);
 }
 
-// ROM picker
-rom.onchange =
-e=>load(
-e.target.files[0]
-);
+// INPUTS
+rom.onchange = e=>load(e.target.files[0]);
 
-// drag/drop
-document.body.ondragover =
-e=>e.preventDefault();
-
+document.body.ondragover = e=>e.preventDefault();
 document.body.ondrop = e=>{
-
 e.preventDefault();
-
-load(
-e.dataTransfer.files[0]
-);
+load(e.dataTransfer.files[0]);
 };
 
-// upload save
+// SAVE UPLOAD
 sav.onchange = ()=>{
 
-if(!game){
+if(!game) return alert("Load ROM first");
 
-alert("Load ROM first");
-
-return;
-}
-
-const file =
-sav.files[0];
-
+const file = sav.files[0];
 if(!file) return;
 
-const r =
-new FileReader();
+const r = new FileReader();
 
 r.onload = ()=>{
-
 try{
-
-localStorage.setItem(
-game + ".sav",
-r.result.split(",")[1]
-);
-
-alert(
-"Save uploaded. Reload ROM."
-);
-
+localStorage.setItem(game + ".sav", r.result.split(",")[1]);
+alert("Save uploaded. Reload ROM.");
 }catch(e){
-
 alert("Bad save");
 }
 };
@@ -210,49 +140,23 @@ alert("Bad save");
 r.readAsDataURL(file);
 };
 
-// download save
+// SAVE DOWNLOAD
 function downloadSav(){
 
-if(!game){
+if(!game) return alert("No game");
 
-alert("No game");
+const data = localStorage.getItem(game + ".sav");
 
-return;
-}
+if(!data) return alert("No save");
 
-const data =
-localStorage.getItem(
-game + ".sav"
-);
-
-if(!data){
-
-alert("No save");
-
-return;
-}
-
-const a =
-document.createElement("a");
-
-a.href =
-"data:application/octet-stream;base64,"
-+ data;
-
-a.download =
-game + ".sav";
-
+const a = document.createElement("a");
+a.href = "data:application/octet-stream;base64," + data;
+a.download = game + ".sav";
 a.click();
 }
 
-// fullscreen
+// FULLSCREEN
 function fullscreen(){
-
-const g =
-document.getElementById("game");
-
-if(g.requestFullscreen){
-
-g.requestFullscreen();
-}
+const g = document.getElementById("game");
+if(g.requestFullscreen) g.requestFullscreen();
 }
