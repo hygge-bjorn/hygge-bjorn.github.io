@@ -1,88 +1,38 @@
-let currentRom = null;
-let emulator = null;
+window.EJS_player = "#game";
 
-// IndexedDB simple save system
-const DB_NAME = "retro-saves";
-const STORE = "files";
+window.EJS_gameUrl =
+blobUrl;
 
-function openDB() {
-  return new Promise((resolve) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-  });
-}
+window.EJS_core = c;
 
-async function saveFile(key, data) {
-  const db = await openDB();
-  const tx = db.transaction(STORE, "readwrite");
-  tx.objectStore(STORE).put(data, key);
-}
+window.EJS_gameName =
+game;
 
-async function loadFile(key) {
-  const db = await openDB();
-  const tx = db.transaction(STORE, "readonly");
-  return tx.objectStore(STORE).get(key);
-}
+window.EJS_pathtodata =
+"https://cdn.emulatorjs.org/stable/data/";
 
-// Load emulator
-function loadGame(file) {
-  currentRom = file;
+window.EJS_startOnLoaded =
+true;
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const romData = e.target.result;
+const s =
+document.createElement("script");
 
-    startEmulator(file.name, romData);
-  };
-  reader.readAsArrayBuffer(file);
-}
+s.id = "ejs";
 
-// Emulator init (EmulatorJS)
-function startEmulator(name, buffer) {
-  document.getElementById("screen").innerHTML = "";
+s.src =
+"https://cdn.emulatorjs.org/stable/data/loader.js?v="
++ Date.now();
 
-  EJS_player = "#screen";
-  EJS_gameName = name;
-  EJS_gameUrl = URL.createObjectURL(new Blob([buffer]));
-  EJS_core = getCore(name);
+s.onload = ()=>{
 
-  // save support
-  EJS_onSaveState = function (state) {
-    saveFile(name + ".state", state);
-  };
+loading = false;
+};
 
-  EJS_onSaveSRAM = function (sav) {
-    saveFile(name + ".sav", sav);
-  };
+s.onerror = ()=>{
 
-  emulator = new EJS(EmulatorJS);
-}
+loading = false;
 
-// choose core automatically
-function getCore(name) {
-  if (name.endsWith(".gb")) return "gb";
-  if (name.endsWith(".gbc")) return "gb";
-  if (name.endsWith(".gba")) return "gba";
-  if (name.endsWith(".nds")) return "nds"; // experimental (melonDS)
-  return "gba";
-}
+alert("Core load failed");
+};
 
-// File input
-document.getElementById("romInput").addEventListener("change", (e) => {
-  loadGame(e.target.files[0]);
-});
-
-// Drag & drop
-const dropZone = document.getElementById("dropZone");
-
-dropZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-});
-
-dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  loadGame(e.dataTransfer.files[0]);
-});
+document.body.appendChild(s);
