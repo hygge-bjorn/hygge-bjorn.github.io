@@ -1,314 +1,88 @@
-let currentSave = null;
+let currentRom = null;
+let emulator = null;
 
-let emulatorLoaded = false;
+// IndexedDB simple save system
+const DB_NAME = "retro-saves";
+const STORE = "files";
 
-const gameDiv =
-document.getElementById("game");
-
-const romUpload =
-document.getElementById("romUpload");
-
-const savUpload =
-document.getElementById("savUpload");
-
-const downloadBtn =
-document.getElementById("downloadSaveBtn");
-
-// ROM UPLOAD
-romUpload.addEventListener(
-    "change",
-    async function(e){
-
-    const file = e.target.files[0];
-
-    if(!file) return;
-
-    await startEmulator(file);
-});
-
-// START EMULATOR
-async function startEmulator(file){
-
-    // CLEAR OLD SCREEN
-    gameDiv.innerHTML = "";
-
-    // REMOVE OLD LOADER
-    const oldLoader =
-    document.getElementById("ejsloader");
-
-    if(oldLoader){
-        oldLoader.remove();
-    }
-
-    emulatorLoaded = false;
-
-    // READ ROM
-    const arrayBuffer =
-    await file.arrayBuffer();
-
-    const romData =
-    new Uint8Array(arrayBuffer);
-
-    // DETECT CORE
-    let core = "gba";
-
-    if(file.name.endsWith(".gb")){
-        core = "gb";
-    }
-
-    if(file.name.endsWith(".gbc")){
-        core = "gb";
-    }
-
-    // EMULATORJS SETTINGS
-    window.EJS_player = "#game";
-
-    window.EJS_core = core;
-
-    window.EJS_pathtodata = "./data/";
-
-    window.EJS_gameData = romData;
-
-    // DISABLE ADS/UI STUFF
-    window.EJS_startOnLoaded = true;
-
-    // SAVE CALLBACK
-    window.EJS_onSaveUpdate =
-    function(saveData){
-
-        currentSave = saveData;
+function openDB() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE);
     };
-
-    // GAME START CALLBACK
-    window.EJS_onGameStart =
-    function(){
-
-        emulatorLoaded = true;
-
-        console.log(
-            "Game Started"
-        );
-    };
-
-    // LOAD EMULATORJS
-    const script =
-    document.createElement("script");
-
-    script.id = "ejsloader";
-
-    script.src = "./data/loader.js";
-
-    document.body.appendChild(script);
+    req.onsuccess = () => resolve(req.result);
+  });
 }
 
-// DOWNLOAD SAVE
-downloadBtn.addEventListener(
-    "click",
-    function(){
+async function saveFile(key, data) {
+  const db = await openDB();
+  const tx = db.transaction(STORE, "readwrite");
+  tx.objectStore(STORE).put(data, key);
+}
 
-    if(!currentSave){
+async function loadFile(key) {
+  const db = await openDB();
+  const tx = db.transaction(STORE, "readonly");
+  return tx.objectStore(STORE).get(key);
+}
 
-        alert(
-            "No save data yet."
-        );
+// Load emulator
+function loadGame(file) {
+  currentRom = file;
 
-        return;
-    }
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const romData = e.target.result;
 
-    const blob =
-    new Blob(
-        [currentSave],
-        {
-            type:
-            "application/octet-stream"
-        }
-    );
+    startEmulator(file.name, romData);
+  };
+  reader.readAsArrayBuffer(file);
+}
 
-    const url =
-    URL.createObjectURL(blob);
+// Emulator init (EmulatorJS)
+function startEmulator(name, buffer) {
+  document.getElementById("screen").innerHTML = "";
 
-    const a =
-    document.createElement("a");
+  EJS_player = "#screen";
+  EJS_gameName = name;
+  EJS_gameUrl = URL.createObjectURL(new Blob([buffer]));
+  EJS_core = getCore(name);
 
-    a.href = url;
+  // save support
+  EJS_onSaveState = function (state) {
+    saveFile(name + ".state", state);
+  };
 
-    a.download = "game.sav";
+  EJS_onSaveSRAM = function (sav) {
+    saveFile(name + ".sav", sav);
+  };
 
-    a.click();
+  emulator = new EJS(EmulatorJS);
+}
 
-    URL.revokeObjectURL(url);
+// choose core automatically
+function getCore(name) {
+  if (name.endsWith(".gb")) return "gb";
+  if (name.endsWith(".gbc")) return "gb";
+  if (name.endsWith(".gba")) return "gba";
+  if (name.endsWith(".nds")) return "nds"; // experimental (melonDS)
+  return "gba";
+}
+
+// File input
+document.getElementById("romInput").addEventListener("change", (e) => {
+  loadGame(e.target.files[0]);
 });
 
-// SAVE UPLOAD
-savUpload.addEventListener(
-    "change",
-    async function(e){
+// Drag & drop
+const dropZone = document.getElementById("dropZone");
 
-    const file = e.target.files[0];
-
-    if(!file) return;
-
-    const buffer =
-    await file.arrayBuffer();
-
-    const saveArray =
-    new Uint8Array(buffer);
-
-    // STORE SAVE
-    localStorage.setItem(
-        "EJS_SAVE",
-        JSON.stringify(
-            Array.from(saveArray)
-        )
-    );
-
-    alert(
-        "Save uploaded. Reload ROM."
-    );
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
 });
 
-// KEYBOARD CONTROLS
-document.addEventListener(
-    "keydown",
-    function(e){
-
-    if(
-        !emulatorLoaded ||
-        !window.EJS_emulator
-    ){
-        return;
-    }
-
-    switch(e.code){
-
-        case "ArrowUp":
-            EJS_emulator.setButton(
-                "up",
-                true
-            );
-            break;
-
-        case "ArrowDown":
-            EJS_emulator.setButton(
-                "down",
-                true
-            );
-            break;
-
-        case "ArrowLeft":
-            EJS_emulator.setButton(
-                "left",
-                true
-            );
-            break;
-
-        case "ArrowRight":
-            EJS_emulator.setButton(
-                "right",
-                true
-            );
-            break;
-
-        case "KeyZ":
-            EJS_emulator.setButton(
-                "a",
-                true
-            );
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton(
-                "b",
-                true
-            );
-            break;
-
-        case "Enter":
-            EJS_emulator.setButton(
-                "start",
-                true
-            );
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton(
-                "select",
-                true
-            );
-            break;
-    }
-});
-
-// KEY RELEASE
-document.addEventListener(
-    "keyup",
-    function(e){
-
-    if(
-        !emulatorLoaded ||
-        !window.EJS_emulator
-    ){
-        return;
-    }
-
-    switch(e.code){
-
-        case "ArrowUp":
-            EJS_emulator.setButton(
-                "up",
-                false
-            );
-            break;
-
-        case "ArrowDown":
-            EJS_emulator.setButton(
-                "down",
-                false
-            );
-            break;
-
-        case "ArrowLeft":
-            EJS_emulator.setButton(
-                "left",
-                false
-            );
-            break;
-
-        case "ArrowRight":
-            EJS_emulator.setButton(
-                "right",
-                false
-            );
-            break;
-
-        case "KeyZ":
-            EJS_emulator.setButton(
-                "a",
-                false
-            );
-            break;
-
-        case "KeyX":
-            EJS_emulator.setButton(
-                "b",
-                false
-            );
-            break;
-
-        case "Enter":
-            EJS_emulator.setButton(
-                "start",
-                false
-            );
-            break;
-
-        case "ShiftLeft":
-        case "ShiftRight":
-            EJS_emulator.setButton(
-                "select",
-                false
-            );
-            break;
-    }
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  loadGame(e.dataTransfer.files[0]);
 });
