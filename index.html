@@ -1,124 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Retro Emulator</title>
-
-<style>
-body{
-    margin:0;
-    background:#111;
-    color:white;
-    font-family:Arial, sans-serif;
-    text-align:center;
-}
-
-h1{
-    margin-top:15px;
-}
-
-#topbar{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:10px;
-    margin:15px;
-}
-
-button,input{
-    padding:10px;
-    border:none;
-    border-radius:10px;
-    font-size:16px;
-}
-
-button{
-    cursor:pointer;
-    background:#444;
-    color:white;
-}
-
-button:hover{
-    background:#666;
-}
-
-#dropzone{
-    width:min(90vw,500px);
-    margin:20px auto;
-    padding:25px;
-    border:3px dashed #777;
-    border-radius:12px;
-}
-
-#game{
-    width:min(95vw,900px);
-    height:70vh;
-    margin:auto;
-    border:4px solid white;
-    background:black;
-}
-
-.small{
-    color:#aaa;
-    font-size:14px;
-}
-
-#controls{
-    margin-top:15px;
-    color:#ccc;
-}
-</style>
-</head>
-<body>
-
-<h1>Retro Emulator</h1>
-
-<div id="topbar">
-
-<input type="file" id="romInput" accept=".gb,.gbc,.gba">
-
-<input type="file" id="savInput" accept=".sav" hidden>
-
-<button id="uploadSavBtn">
-Upload .sav
-</button>
-
-<button id="downloadSavBtn">
-Download .sav
-</button>
-
-<button id="fullscreenBtn">
-Fullscreen
-</button>
-
-</div>
-
-<div id="dropzone">
-Drag & Drop ROM Here
-
-<div class="small">
-Supports GB / GBC / GBA
-</div>
-</div>
-
-<div id="game"></div>
-
-<div id="controls">
-Default Controls:
-<br>
-D-Pad = Arrow Keys
-<br>
-A = X
-<br>
-B = Z
-<br>
-Start = Enter
-<br>
-Select = Shift
-</div>
-
 <script>
 const romInput = document.getElementById("romInput");
 const savInput = document.getElementById("savInput");
@@ -129,8 +8,71 @@ const dropzone = document.getElementById("dropzone");
 
 let currentGameName = null;
 let currentCore = null;
+let loadingGame = false;
+let emulatorReady = false;
+let currentBlobUrl = null;
 
+// SAFE STORAGE
+function saveToBrowser(key, value){
+    try{
+        localStorage.setItem(key, value);
+    }catch(err){
+        console.error("Save failed", err);
+        alert("Browser storage full or blocked.");
+    }
+}
+
+function loadFromBrowser(key){
+    try{
+        return localStorage.getItem(key);
+    }catch(err){
+        console.error("Load failed", err);
+        return null;
+    }
+}
+
+// CLEANUP OLD EMULATOR
+function cleanupOldEmulator(){
+
+    emulatorReady = false;
+
+    try{
+
+        const oldScript =
+        document.getElementById("ejsloader");
+
+        if(oldScript){
+            oldScript.remove();
+        }
+
+        const game =
+        document.getElementById("game");
+
+        game.innerHTML = "";
+
+        // cleanup old blob URL
+        if(currentBlobUrl){
+            URL.revokeObjectURL(currentBlobUrl);
+            currentBlobUrl = null;
+        }
+
+        // clear old globals
+        delete window.EJS_player;
+        delete window.EJS_gameUrl;
+        delete window.EJS_core;
+        delete window.EJS_gameName;
+        delete window.EJS_pathtodata;
+        delete window.EJS_loadStateURL;
+        delete window.EJS_onSaveSRAM;
+
+    }catch(err){
+        console.error("Cleanup failed", err);
+    }
+}
+
+// SAFE CORE DETECTION
 function getCore(filename){
+
     const lower = filename.toLowerCase();
 
     if(lower.endsWith(".gba")) return "gba";
@@ -140,95 +82,235 @@ function getCore(filename){
     return null;
 }
 
-async function saveToBrowser(key, value){
-    localStorage.setItem(key, value);
+// ROM VALIDATION
+function validateRom(file){
+
+    const valid =
+    [".gba",".gb",".gbc"];
+
+    const lower =
+    file.name.toLowerCase();
+
+    const ok =
+    valid.some(ext=>lower.endsWith(ext));
+
+    if(!ok){
+        alert("Unsupported ROM type.");
+        return false;
+    }
+
+    // prevent gigantic files
+    if(file.size > 64 * 1024 * 1024){
+
+        alert("ROM too large.");
+
+        return false;
+    }
+
+    // prevent empty files
+    if(file.size <= 0){
+
+        alert("ROM file is empty.");
+
+        return false;
+    }
+
+    return true;
 }
 
-async function loadFromBrowser(key){
-    return localStorage.getItem(key);
-}
+// MAIN LOADER
+async function startEmulator(file){
 
-function startEmulator(file){
+    if(loadingGame){
+
+        alert("Game already loading.");
+
+        return;
+    }
+
+    if(!validateRom(file)){
+        return;
+    }
+
+    loadingGame = true;
+
+    cleanupOldEmulator();
 
     currentGameName = file.name;
     currentCore = getCore(file.name);
 
-    if(!currentCore){
-        alert("Unsupported ROM");
-        return;
-    }
-
     const reader = new FileReader();
+
+    reader.onerror = function(){
+
+        loadingGame = false;
+
+        alert("Failed to read ROM.");
+    };
 
     reader.onload = async function(){
 
-        const romBlob = new Blob([reader.result]);
+        try{
 
-        document.getElementById("game").innerHTML = "";
+            const romBlob =
+            new Blob([reader.result]);
 
-        window.EJS_player = "#game";
-        window.EJS_gameUrl = URL.createObjectURL(romBlob);
-        window.EJS_core = currentCore;
-        window.EJS_gameName = currentGameName;
-        window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+            currentBlobUrl =
+            URL.createObjectURL(romBlob);
 
-        // AUTO LOAD SAVE
-        const existingSav = await loadFromBrowser(currentGameName + ".sav");
+            window.EJS_player = "#game";
+            window.EJS_gameUrl = currentBlobUrl;
+            window.EJS_core = currentCore;
+            window.EJS_gameName = currentGameName;
 
-        if(existingSav){
+            window.EJS_pathtodata =
+            "https://cdn.emulatorjs.org/stable/data/";
 
-            const byteString = atob(existingSav);
+            // SAFER SAVE LOADING
+            const existingSav =
+            loadFromBrowser(
+                currentGameName + ".sav"
+            );
 
-            const bytes = new Uint8Array(byteString.length);
+            if(existingSav){
 
-            for(let i=0;i<byteString.length;i++){
-                bytes[i] = byteString.charCodeAt(i);
+                try{
+
+                    const byteString =
+                    atob(existingSav);
+
+                    const bytes =
+                    new Uint8Array(
+                        byteString.length
+                    );
+
+                    for(
+                        let i=0;
+                        i<byteString.length;
+                        i++
+                    ){
+                        bytes[i] =
+                        byteString.charCodeAt(i);
+                    }
+
+                    const saveBlob =
+                    new Blob([bytes]);
+
+                    window.EJS_loadStateURL =
+                    URL.createObjectURL(saveBlob);
+
+                }catch(err){
+
+                    console.error(
+                        "Corrupted save ignored",
+                        err
+                    );
+                }
             }
 
-            window.EJS_loadStateURL = URL.createObjectURL(
-                new Blob([bytes])
-            );
-        }
+            // SAFE SAVE HANDLER
+            window.EJS_onSaveSRAM =
+            function(data){
 
-        // AUTO SAVE SRAM
-        window.EJS_onSaveSRAM = function(data){
+                try{
 
-            const reader = new FileReader();
+                    const saveReader =
+                    new FileReader();
 
-            reader.onload = function(){
+                    saveReader.onload =
+                    function(){
 
-                const base64 = reader.result.split(",")[1];
+                        try{
 
-                saveToBrowser(
-                    currentGameName + ".sav",
-                    base64
+                            const base64 =
+                            saveReader.result
+                            .split(",")[1];
+
+                            saveToBrowser(
+                                currentGameName + ".sav",
+                                base64
+                            );
+
+                        }catch(err){
+                            console.error(
+                                "Save encoding failed",
+                                err
+                            );
+                        }
+                    };
+
+                    saveReader.readAsDataURL(data);
+
+                }catch(err){
+
+                    console.error(
+                        "Save failed",
+                        err
+                    );
+                }
+            };
+
+            // START AUTOMATICALLY
+            window.EJS_startOnLoaded = true;
+
+            // LOAD EMULATORJS
+            const script =
+            document.createElement("script");
+
+            script.src =
+            "https://cdn.emulatorjs.org/stable/data/loader.js";
+
+            script.id = "ejsloader";
+
+            script.onload = function(){
+
+                emulatorReady = true;
+                loadingGame = false;
+            };
+
+            script.onerror = function(){
+
+                loadingGame = false;
+
+                alert(
+                    "Failed to load emulator core."
                 );
             };
 
-            reader.readAsDataURL(data);
-        };
+            document.body.appendChild(script);
 
-        window.EJS_startOnLoaded = true;
+            // FAILSAFE TIMEOUT
+            setTimeout(()=>{
 
-        const oldScript = document.getElementById("ejsloader");
+                if(!emulatorReady){
 
-        if(oldScript) oldScript.remove();
+                    loadingGame = false;
 
-        const script = document.createElement("script");
+                    console.warn(
+                        "Emulator load timeout."
+                    );
+                }
 
-        script.src =
-        "https://cdn.emulatorjs.org/stable/data/loader.js";
+            },15000);
 
-        script.id = "ejsloader";
+        }catch(err){
 
-        document.body.appendChild(script);
+            console.error(err);
+
+            alert(
+                "Emulator crashed while loading."
+            );
+
+            loadingGame = false;
+        }
     };
 
     reader.readAsArrayBuffer(file);
 }
 
-// ROM PICKER
-romInput.addEventListener("change", (e)=>{
+// FILE PICKER
+romInput.addEventListener("change",(e)=>{
+
     const file = e.target.files[0];
 
     if(file){
@@ -237,87 +319,178 @@ romInput.addEventListener("change", (e)=>{
 });
 
 // DRAG DROP
-dropzone.addEventListener("dragover", (e)=>{
+dropzone.addEventListener("dragover",(e)=>{
     e.preventDefault();
 });
 
-dropzone.addEventListener("drop", (e)=>{
+dropzone.addEventListener("drop",(e)=>{
+
     e.preventDefault();
 
-    const file = e.dataTransfer.files[0];
+    if(loadingGame){
+        return;
+    }
+
+    const file =
+    e.dataTransfer.files[0];
 
     if(file){
         startEmulator(file);
     }
 });
 
-// UPLOAD SAV
-uploadSavBtn.addEventListener("click", ()=>{
+// SAV UPLOAD
+uploadSavBtn.addEventListener("click",()=>{
     savInput.click();
 });
 
-savInput.addEventListener("change", (e)=>{
+savInput.addEventListener("change",(e)=>{
 
-    const file = e.target.files[0];
+    const file =
+    e.target.files[0];
 
-    if(!file || !currentGameName){
-        alert("Load a ROM first");
+    if(!file){
+
         return;
     }
 
-    const reader = new FileReader();
+    if(!currentGameName){
+
+        alert("Load a ROM first.");
+
+        return;
+    }
+
+    if(file.size > 10 * 1024 * 1024){
+
+        alert("Save file too large.");
+
+        return;
+    }
+
+    const reader =
+    new FileReader();
+
+    reader.onerror = function(){
+
+        alert("Failed to read save.");
+    };
 
     reader.onload = function(){
 
-        const base64 = reader.result.split(",")[1];
+        try{
 
-        saveToBrowser(
-            currentGameName + ".sav",
-            base64
-        );
+            const base64 =
+            reader.result.split(",")[1];
 
-        alert("Save uploaded. Reload ROM.");
+            saveToBrowser(
+                currentGameName + ".sav",
+                base64
+            );
+
+            alert(
+                "Save uploaded. Reload ROM."
+            );
+
+        }catch(err){
+
+            alert(
+                "Invalid save file."
+            );
+        }
     };
 
     reader.readAsDataURL(file);
 });
 
-// DOWNLOAD SAV
-downloadSavBtn.addEventListener("click", async ()=>{
+// SAV DOWNLOAD
+downloadSavBtn.addEventListener(
+"click",
+async ()=>{
 
     if(!currentGameName){
-        alert("No game loaded");
+
+        alert("No game loaded.");
+
         return;
     }
 
-    const sav = await loadFromBrowser(
-        currentGameName + ".sav"
-    );
+    try{
 
-    if(!sav){
-        alert("No save found");
-        return;
+        const sav =
+        loadFromBrowser(
+            currentGameName + ".sav"
+        );
+
+        if(!sav){
+
+            alert("No save found.");
+
+            return;
+        }
+
+        const a =
+        document.createElement("a");
+
+        a.href =
+        "data:application/octet-stream;base64,"
+        + sav;
+
+        a.download =
+        currentGameName + ".sav";
+
+        a.click();
+
+    }catch(err){
+
+        alert(
+            "Failed to download save."
+        );
     }
-
-    const a = document.createElement("a");
-
-    a.href = "data:application/octet-stream;base64," + sav;
-
-    a.download = currentGameName + ".sav";
-
-    a.click();
 });
 
 // FULLSCREEN
-fullscreenBtn.addEventListener("click", ()=>{
+fullscreenBtn.addEventListener(
+"click",
+()=>{
 
-    const game = document.getElementById("game");
+    try{
 
-    if(game.requestFullscreen){
-        game.requestFullscreen();
+        const game =
+        document.getElementById("game");
+
+        if(game.requestFullscreen){
+            game.requestFullscreen();
+        }
+
+    }catch(err){
+
+        console.error(
+            "Fullscreen failed",
+            err
+        );
     }
 });
-</script>
 
-</body>
-</html>
+// PREVENT BROWSER CRASH SPAM
+window.addEventListener(
+"error",
+(event)=>{
+
+    console.error(
+        "Global error:",
+        event.error
+    );
+});
+
+// PREVENT UNHANDLED PROMISE CRASHES
+window.addEventListener(
+"unhandledrejection",
+(event)=>{
+
+    console.error(
+        "Unhandled promise:",
+        event.reason
+    );
+});
+</script>
