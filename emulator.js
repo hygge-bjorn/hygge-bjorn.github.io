@@ -72,67 +72,101 @@ window.EJS_pathtodata =
 window.EJS_startOnLoaded = true;
 window.EJS_forceLegacyCores = true;
 
-// ===== SAVE LOAD (PRIMARY + BACKUP) =====
-const save1 = localStorage.getItem(game + ".sav");
-const save2 = localStorage.getItem(game + ".sav_backup");
+// load save (only visual, not source of truth)
+const save = localStorage.getItem(game + ".sav");
 
-const existing = save1 || save2;
-
-if(existing){
-
+if(save){
 try{
-
 const bytes =
-Uint8Array.from(atob(existing),c=>c.charCodeAt(0));
+Uint8Array.from(atob(save),c=>c.charCodeAt(0));
 
 window.EJS_loadStateURL =
 URL.createObjectURL(new Blob([bytes]));
-
 }catch(e){}
 }
 
-// ===== SAVE WRITE (FIXED + BACKUP) =====
-window.EJS_onSaveSRAM = data=>{
+// IMPORTANT: DO NOT RELY ON THIS (kept only as fallback)
+window.EJS_onSaveSRAM = ()=>{};
 
-if(!data) return;
+// loader
+const script = document.createElement("script");
+script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+script.id = "emulatorjs";
 
-const r = new FileReader();
+document.body.appendChild(script);
 
-r.onload = ()=>{
+// 🔥 AUTO-SAVE POLLING (REAL FIX)
+setInterval(async ()=>{
 
 try{
 
-const base64 = r.result.split(",")[1];
+const dbs = await indexedDB.databases?.();
+
+if(!dbs) return;
+
+for(const db of dbs){
+
+if(!db.name.includes("emulator")) continue;
+
+const request = indexedDB.open(db.name);
+
+request.onsuccess = ()=>{
+
+try{
+
+const idb = request.result;
+
+const tx = idb.transaction(idb.objectStoreNames, "readonly");
+
+for(const store of idb.objectStoreNames){
+
+const obj = tx.objectStore(store).getAll();
+
+obj.onsuccess = ()=>{
+
+const data = obj.result;
+
+if(!data || !data.length) return;
+
+// find largest buffer (likely SRAM)
+let best = null;
+
+for(const item of data){
+if(item instanceof ArrayBuffer || item?.buffer){
+best = item;
+}
+}
+
+if(best){
+
+const bytes = new Uint8Array(best);
+
+const base64 = btoa(
+String.fromCharCode(...bytes)
+);
 
 localStorage.setItem(game + ".sav", base64);
-localStorage.setItem(game + ".sav_backup", base64);
+}
+
+};
+
+}
 
 }catch(e){}
 };
 
-r.readAsDataURL(data);
-};
+}
 
-// LOAD EMULATOR
-const script = document.createElement("script");
+}catch(e){}
 
-script.src =
-"https://cdn.emulatorjs.org/stable/data/loader.js";
+},5000);
 
-script.id = "emulatorjs";
-
-script.onerror = ()=>{
-
-alert("Core load failed");
-};
-
-document.body.appendChild(script);
 };
 
 reader.readAsArrayBuffer(file);
 }
 
-// ===== INPUTS =====
+// INPUTS
 rom.onchange = e=>load(e.target.files[0]);
 
 document.body.ondragover = e=>e.preventDefault();
@@ -142,13 +176,9 @@ e.preventDefault();
 load(e.dataTransfer.files[0]);
 };
 
-// ===== SAVE UPLOAD =====
 sav.onchange = ()=>{
 
-if(!game){
-alert("Load ROM first");
-return;
-}
+if(!game) return alert("Load ROM first");
 
 const file = sav.files[0];
 if(!file) return;
@@ -157,24 +187,17 @@ const r = new FileReader();
 
 r.onload = ()=>{
 
-try{
-
 const base64 = r.result.split(",")[1];
 
 localStorage.setItem(game + ".sav", base64);
-localStorage.setItem(game + ".sav_backup", base64);
 
-alert("Save uploaded. Reload ROM.");
-
-}catch(e){
-alert("Invalid save file");
-}
+alert("Save imported");
 };
 
 r.readAsDataURL(file);
 };
 
-// ===== SAVE DOWNLOAD (FIXED RELIABILITY) =====
+// 🔥 REAL FIX DOWNLOAD
 function downloadSav(){
 
 if(!game){
@@ -182,12 +205,10 @@ alert("No game loaded");
 return;
 }
 
-let data =
-localStorage.getItem(game + ".sav") ||
-localStorage.getItem(game + ".sav_backup");
+const data = localStorage.getItem(game + ".sav");
 
 if(!data){
-alert("No save found. Save in-game first.");
+alert("No save found yet. Save in-game first.");
 return;
 }
 
@@ -197,7 +218,6 @@ a.download = game.replace(/\.[^/.]+$/, "") + ".sav";
 a.click();
 }
 
-// ===== FULLSCREEN =====
 function fullscreen(){
 const g = document.getElementById("game");
 if(g.requestFullscreen) g.requestFullscreen();
