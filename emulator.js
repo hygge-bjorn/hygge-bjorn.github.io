@@ -3,7 +3,7 @@ const sav = document.getElementById("sav");
 
 let game = "";
 let blobUrl = null;
-let emulatorReady = false;
+let latestSave = null;
 
 function core(name){
 
@@ -41,7 +41,7 @@ URL.revokeObjectURL(blobUrl);
 blobUrl = null;
 }
 
-emulatorReady = false;
+latestSave = null;
 }
 
 function load(file){
@@ -78,7 +78,10 @@ window.EJS_startOnLoaded = true;
 
 window.EJS_forceLegacyCores = true;
 
-// IMPORT SAV IF EXISTS
+// autosave every 5s
+window.EJS_fixedSaveInterval = 5000;
+
+// LOAD EXISTING SAVE
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -102,6 +105,38 @@ new Blob([bytes])
 }catch(e){}
 }
 
+// REAL SAVE CALLBACK
+window.EJS_onSaveUpdate = function(e){
+
+try{
+
+if(!e || !e.save) return;
+
+const bytes =
+new Uint8Array(e.save);
+
+let binary = "";
+
+for(let i=0;i<bytes.length;i++){
+binary +=
+String.fromCharCode(bytes[i]);
+}
+
+const base64 = btoa(binary);
+
+latestSave = base64;
+
+localStorage.setItem(
+game + ".sav",
+base64
+);
+
+}catch(err){
+
+console.log(err);
+}
+};
+
 const script =
 document.createElement("script");
 
@@ -109,11 +144,6 @@ script.src =
 "https://cdn.emulatorjs.org/stable/data/loader.js";
 
 script.id = "emulatorjs";
-
-script.onload = ()=>{
-
-emulatorReady = true;
-};
 
 script.onerror = ()=>{
 
@@ -188,74 +218,20 @@ alert("Import failed");
 reader.readAsDataURL(file);
 };
 
-// REAL SAVE EXPORT
-async function downloadSav(){
+// DOWNLOAD REAL SAV
+function downloadSav(){
 
-if(!emulatorReady){
-
-alert("Game not ready");
-
-return;
-}
-
-try{
-
-// EmulatorJS internal storage
-const db =
-await new Promise((resolve,reject)=>{
-
-const req =
-indexedDB.open("EJS_STORAGE");
-
-req.onsuccess =
-()=>resolve(req.result);
-
-req.onerror =
-()=>reject();
-});
-
-const tx =
-db.transaction(
-["files"],
-"readonly"
+const data =
+latestSave ||
+localStorage.getItem(
+game + ".sav"
 );
 
-const store =
-tx.objectStore("files");
-
-const req =
-store.getAll();
-
-req.onsuccess = ()=>{
-
-const result = req.result;
-
-if(!result || !result.length){
+if(!data){
 
 alert(
-"No save found. Save in-game first."
+"No save found yet. Save in-game first and wait a few seconds."
 );
-
-return;
-}
-
-// find SRAM
-let save = null;
-
-for(const item of result){
-
-if(
-item &&
-item.file &&
-item.file.size > 1000
-){
-save = item.file;
-}
-}
-
-if(!save){
-
-alert("No SRAM found");
 
 return;
 }
@@ -264,21 +240,12 @@ const a =
 document.createElement("a");
 
 a.href =
-URL.createObjectURL(save);
+"data:application/octet-stream;base64," + data;
 
 a.download =
-game.replace(/\.[^/.]+$/, "")
-+ ".sav";
+game.replace(/\.[^/.]+$/, "") + ".sav";
 
 a.click();
-};
-
-}catch(e){
-
-alert(
-"Save export failed"
-);
-}
 }
 
 // FULLSCREEN
