@@ -3,23 +3,13 @@ const sav = document.getElementById("sav");
 
 let game = "";
 let blobUrl = null;
-let latestSave = null;
 
 function core(name){
 
 name = name.toLowerCase();
 
-window.EJS_forceLegacyCores = true;
-
 if(name.endsWith(".gba")){
 window.EJS_core = "mgba";
-
-/*
-FORCE FLASH 128K SAVES
-Fixes many Pokemon games/hacks
-*/
-window.EJS_saveType = 1;
-
 return;
 }
 
@@ -30,6 +20,7 @@ return;
 
 if(name.endsWith(".gbc")){
 window.EJS_core = "gbc";
+window.EJS_forceLegacyCores = true;
 return;
 }
 }
@@ -45,11 +36,11 @@ document.getElementById("game")
 .innerHTML = "";
 
 if(blobUrl){
+
 URL.revokeObjectURL(blobUrl);
+
 blobUrl = null;
 }
-
-latestSave = null;
 }
 
 function load(file){
@@ -62,7 +53,8 @@ clean();
 
 core(file.name);
 
-const reader = new FileReader();
+const reader =
+new FileReader();
 
 reader.onload = ()=>{
 
@@ -71,6 +63,7 @@ URL.createObjectURL(
 new Blob([reader.result])
 );
 
+// emulator config
 window.EJS_player = "#game";
 
 window.EJS_gameUrl =
@@ -84,15 +77,16 @@ window.EJS_pathtodata =
 
 window.EJS_startOnLoaded = true;
 
-/*
-AUTOSAVE EVERY 5 SECONDS
-*/
+// IMPORTANT FOR POKEMON HACKS
+window.EJS_forceLegacyCores = true;
+
+// force Flash128K save type
+window.EJS_saveType = 1;
+
+// autosave
 window.EJS_fixedSaveInterval = 5000;
 
-/*
-LOAD REAL .SAV FILE
-NOT SAVE STATES
-*/
+// LOAD .sav FILE
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -119,49 +113,7 @@ console.log(e);
 }
 }
 
-/*
-REAL SAVE CALLBACK
-*/
-window.EJS_onSaveUpdate =
-function(e){
-
-try{
-
-if(!e || !e.save) return;
-
-const bytes =
-new Uint8Array(e.save);
-
-let binary = "";
-
-for(let i=0;i<bytes.length;i++){
-
-binary +=
-String.fromCharCode(
-bytes[i]
-);
-}
-
-const base64 =
-btoa(binary);
-
-latestSave = base64;
-
-localStorage.setItem(
-game + ".sav",
-base64
-);
-
-console.log(
-"SAV UPDATED"
-);
-
-}catch(err){
-
-console.log(err);
-}
-};
-
+// load emulator
 const script =
 document.createElement("script");
 
@@ -181,17 +133,13 @@ document.body.appendChild(script);
 reader.readAsArrayBuffer(file);
 }
 
-/*
-ROM LOAD
-*/
+// ROM LOAD
 rom.onchange =
 e=>load(
 e.target.files[0]
 );
 
-/*
-DRAG DROP
-*/
+// DRAG DROP
 document.body.ondragover =
 e=>e.preventDefault();
 
@@ -204,9 +152,7 @@ e.dataTransfer.files[0]
 );
 };
 
-/*
-IMPORT .SAV
-*/
+// IMPORT .sav
 sav.onchange = ()=>{
 
 if(!game){
@@ -249,52 +195,53 @@ alert("Import failed");
 reader.readAsDataURL(file);
 };
 
-/*
-DOWNLOAD REAL .SAV
-*/
-function downloadSav(){
+// DOWNLOAD REAL .sav
+async function downloadSav(){
 
-const data =
-latestSave ||
-localStorage.getItem(
-game + ".sav"
-);
+if(!window.EJS_emulator){
 
-if(!data){
+alert("Game not loaded");
+
+return;
+}
+
+try{
+
+const save =
+await window.EJS_emulator.getSaveFile();
+
+if(!save){
 
 alert(
-"No save found yet.\nSave in-game first and wait 5-10 seconds."
+"No save found yet.\nSave in-game first."
 );
 
 return;
 }
 
+const blob =
+new Blob([save]);
+
 const a =
 document.createElement("a");
 
 a.href =
-"data:application/octet-stream;base64," + data;
+URL.createObjectURL(blob);
 
 a.download =
-game.replace(
-/\.[^/.]+$/,
-""
-) + ".sav";
-
-document.body.appendChild(a);
+game.replace(/\.[^/.]+$/, "") + ".sav";
 
 a.click();
 
-document.body.removeChild(a);
+}catch(err){
 
-console.log(
-"SAV DOWNLOADED"
-);
+console.log(err);
+
+alert("Save export failed");
+}
 }
 
-/*
-FULLSCREEN
-*/
+// FULLSCREEN
 function fullscreen(){
 
 const g =
