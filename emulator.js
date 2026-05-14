@@ -9,8 +9,17 @@ function core(name){
 
 name = name.toLowerCase();
 
+window.EJS_forceLegacyCores = true;
+
 if(name.endsWith(".gba")){
 window.EJS_core = "mgba";
+
+/*
+FORCE FLASH 128K SAVES
+Fixes many Pokemon games/hacks
+*/
+window.EJS_saveType = 1;
+
 return;
 }
 
@@ -21,7 +30,6 @@ return;
 
 if(name.endsWith(".gbc")){
 window.EJS_core = "gbc";
-window.EJS_forceLegacyCores = true;
 return;
 }
 }
@@ -76,12 +84,15 @@ window.EJS_pathtodata =
 
 window.EJS_startOnLoaded = true;
 
-window.EJS_forceLegacyCores = true;
-
-// autosave every 5s
+/*
+AUTOSAVE EVERY 5 SECONDS
+*/
 window.EJS_fixedSaveInterval = 5000;
 
-// LOAD EXISTING SAVE
+/*
+LOAD REAL .SAV FILE
+NOT SAVE STATES
+*/
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -97,16 +108,22 @@ atob(existing),
 c=>c.charCodeAt(0)
 );
 
-window.EJS_loadStateURL =
+window.EJS_loadSavURL =
 URL.createObjectURL(
 new Blob([bytes])
 );
 
-}catch(e){}
+}catch(e){
+
+console.log(e);
+}
 }
 
-// REAL SAVE CALLBACK
-window.EJS_onSaveUpdate = function(e){
+/*
+REAL SAVE CALLBACK
+*/
+window.EJS_onSaveUpdate =
+function(e){
 
 try{
 
@@ -118,17 +135,25 @@ new Uint8Array(e.save);
 let binary = "";
 
 for(let i=0;i<bytes.length;i++){
+
 binary +=
-String.fromCharCode(bytes[i]);
+String.fromCharCode(
+bytes[i]
+);
 }
 
-const base64 = btoa(binary);
+const base64 =
+btoa(binary);
 
 latestSave = base64;
 
 localStorage.setItem(
 game + ".sav",
 base64
+);
+
+console.log(
+"SAV UPDATED"
 );
 
 }catch(err){
@@ -156,13 +181,17 @@ document.body.appendChild(script);
 reader.readAsArrayBuffer(file);
 }
 
-// ROM LOAD
+/*
+ROM LOAD
+*/
 rom.onchange =
 e=>load(
 e.target.files[0]
 );
 
-// DRAG DROP
+/*
+DRAG DROP
+*/
 document.body.ondragover =
 e=>e.preventDefault();
 
@@ -175,7 +204,9 @@ e.dataTransfer.files[0]
 );
 };
 
-// IMPORT SAV
+/*
+IMPORT .SAV
+*/
 sav.onchange = ()=>{
 
 if(!game){
@@ -218,7 +249,9 @@ alert("Import failed");
 reader.readAsDataURL(file);
 };
 
-// DOWNLOAD REAL SAV
+/*
+DOWNLOAD REAL .SAV
+*/
 function downloadSav(){
 
 const data =
@@ -230,7 +263,7 @@ game + ".sav"
 if(!data){
 
 alert(
-"No save found yet. Save in-game first and wait a few seconds."
+"No save found yet.\nSave in-game first and wait 5-10 seconds."
 );
 
 return;
@@ -243,12 +276,25 @@ a.href =
 "data:application/octet-stream;base64," + data;
 
 a.download =
-game.replace(/\.[^/.]+$/, "") + ".sav";
+game.replace(
+/\.[^/.]+$/,
+""
+) + ".sav";
+
+document.body.appendChild(a);
 
 a.click();
+
+document.body.removeChild(a);
+
+console.log(
+"SAV DOWNLOADED"
+);
 }
 
-// FULLSCREEN
+/*
+FULLSCREEN
+*/
 function fullscreen(){
 
 const g =
