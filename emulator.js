@@ -3,26 +3,42 @@ const sav = document.getElementById("sav");
 
 let game = "";
 let blobUrl = null;
+let latestSave = null;
 
 function core(name){
 
 name = name.toLowerCase();
 
+// GBA
 if(name.endsWith(".gba")){
 window.EJS_core = "mgba";
-return;
+window.EJS_gbaSaveType = "auto";
+return "gba";
 }
 
+// GB
 if(name.endsWith(".gb")){
 window.EJS_core = "gb";
-return;
+return "gb";
 }
 
+// GBC
 if(name.endsWith(".gbc")){
 window.EJS_core = "gbc";
 window.EJS_forceLegacyCores = true;
-return;
+return "gbc";
 }
+
+// SNES
+if(
+name.endsWith(".smc") ||
+name.endsWith(".sfc")
+){
+window.EJS_core = "snes";
+return "snes";
+}
+
+return null;
 }
 
 function clean(){
@@ -41,6 +57,8 @@ URL.revokeObjectURL(blobUrl);
 
 blobUrl = null;
 }
+
+latestSave = null;
 }
 
 function load(file){
@@ -51,10 +69,16 @@ game = file.name;
 
 clean();
 
-core(file.name);
+const type = core(file.name);
 
-const reader =
-new FileReader();
+if(!type){
+
+alert("Unsupported ROM");
+
+return;
+}
+
+const reader = new FileReader();
 
 reader.onload = ()=>{
 
@@ -63,7 +87,6 @@ URL.createObjectURL(
 new Blob([reader.result])
 );
 
-// emulator config
 window.EJS_player = "#game";
 
 window.EJS_gameUrl =
@@ -77,16 +100,9 @@ window.EJS_pathtodata =
 
 window.EJS_startOnLoaded = true;
 
-// IMPORTANT FOR POKEMON HACKS
 window.EJS_forceLegacyCores = true;
 
-// force Flash128K save type
-window.EJS_saveType = 1;
-
-// autosave
-window.EJS_fixedSaveInterval = 5000;
-
-// LOAD .sav FILE
+// load save if exists
 const existing =
 localStorage.getItem(
 game + ".sav"
@@ -102,25 +118,53 @@ atob(existing),
 c=>c.charCodeAt(0)
 );
 
-window.EJS_loadSavURL =
+window.EJS_loadStateURL =
 URL.createObjectURL(
 new Blob([bytes])
 );
 
-}catch(e){
-
-console.log(e);
-}
+}catch(e){}
 }
 
-// load emulator
+// save callback
+window.EJS_onSaveUpdate = function(e){
+
+try{
+
+if(!e || !e.save) return;
+
+const bytes =
+new Uint8Array(e.save);
+
+let binary = "";
+
+for(let i=0;i<bytes.length;i++){
+
+binary +=
+String.fromCharCode(bytes[i]);
+}
+
+const base64 =
+btoa(binary);
+
+latestSave = base64;
+
+localStorage.setItem(
+game + ".sav",
+base64
+);
+
+}catch(err){}
+};
+
 const script =
 document.createElement("script");
 
 script.src =
 "https://cdn.emulatorjs.org/stable/data/loader.js";
 
-script.id = "emulatorjs";
+script.id =
+"emulatorjs";
 
 script.onerror = ()=>{
 
@@ -133,7 +177,7 @@ document.body.appendChild(script);
 reader.readAsArrayBuffer(file);
 }
 
-// ROM LOAD
+// ROM INPUT
 rom.onchange =
 e=>load(
 e.target.files[0]
@@ -152,7 +196,7 @@ e.dataTransfer.files[0]
 );
 };
 
-// IMPORT .sav
+// IMPORT SAVE
 sav.onchange = ()=>{
 
 if(!game){
@@ -195,50 +239,36 @@ alert("Import failed");
 reader.readAsDataURL(file);
 };
 
-// DOWNLOAD REAL .sav
-async function downloadSav(){
+// EXPORT SAVE
+function downloadSav(){
 
-if(!window.EJS_emulator){
+const data =
+latestSave ||
+localStorage.getItem(
+game + ".sav"
+);
 
-alert("Game not loaded");
-
-return;
-}
-
-try{
-
-const save =
-await window.EJS_emulator.getSaveFile();
-
-if(!save){
+if(!data){
 
 alert(
-"No save found yet.\nSave in-game first."
+"No save found yet. Save in-game first."
 );
 
 return;
 }
 
-const blob =
-new Blob([save]);
-
 const a =
 document.createElement("a");
 
 a.href =
-URL.createObjectURL(blob);
+"data:application/octet-stream;base64,"
++ data;
 
 a.download =
-game.replace(/\.[^/.]+$/, "") + ".sav";
+game.replace(/\.[^/.]+$/, "")
++ ".sav";
 
 a.click();
-
-}catch(err){
-
-console.log(err);
-
-alert("Save export failed");
-}
 }
 
 // FULLSCREEN
