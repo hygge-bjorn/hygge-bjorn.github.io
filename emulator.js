@@ -282,3 +282,117 @@ if(g.requestFullscreen){
 g.requestFullscreen();
 }
 }
+// ===== GAMEPAD SUPPORT =====
+
+let gamepadIndex = null;
+
+window.addEventListener(
+"gamepadconnected",
+e=>{
+
+gamepadIndex = e.gamepad.index;
+
+console.log(
+"Controller connected:",
+e.gamepad.id
+);
+
+alert(
+"Controller connected"
+);
+});
+
+window.addEventListener(
+"gamepaddisconnected",
+()=>{
+
+gamepadIndex = null;
+});
+
+const keyMap = {
+
+12:"ArrowUp",
+13:"ArrowDown",
+14:"ArrowLeft",
+15:"ArrowRight",
+
+0:"x", // A
+1:"z", // B
+
+9:"Enter", // Start
+8:"Shift" // Select
+};
+
+const pressed = {};
+
+function pressKey(key){
+
+document.dispatchEvent(
+new KeyboardEvent(
+"keydown",
+{key:key}
+));
+}
+
+function releaseKey(key){
+
+document.dispatchEvent(
+new KeyboardEvent(
+"keyup",
+{key:key}
+));
+}
+
+function pollGamepad(){
+
+if(gamepadIndex === null){
+
+requestAnimationFrame(
+pollGamepad
+);
+
+return;
+}
+
+const gp =
+navigator.getGamepads?.()
+?.[gamepadIndex];
+
+if(!gp){
+
+requestAnimationFrame(
+pollGamepad
+);
+
+return;
+}
+
+for(const b in keyMap){
+
+const key =
+keyMap[b];
+
+const down =
+gp.buttons[b]?.pressed;
+
+if(down && !pressed[b]){
+
+pressKey(key);
+
+pressed[b] = true;
+}
+
+if(!down && pressed[b]){
+
+releaseKey(key);
+
+pressed[b] = false;
+}
+}
+
+requestAnimationFrame(
+pollGamepad
+);
+}
+
+pollGamepad();
