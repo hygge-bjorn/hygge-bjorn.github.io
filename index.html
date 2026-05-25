@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Emulator</title>
 
 <style>
@@ -11,6 +12,7 @@ margin:0;
 background:black;
 height:100%;
 overflow:hidden;
+font-family:sans-serif;
 }
 
 #game{
@@ -27,9 +29,12 @@ z-index:999;
 display:flex;
 gap:5px;
 opacity:.2;
+transition:.2s;
 }
 
-#menu:hover{opacity:1;}
+#menu:hover{
+opacity:1;
+}
 
 button{
 border:none;
@@ -40,21 +45,45 @@ border-radius:8px;
 font-size:14px;
 }
 
-#rom,#sav{display:none;}
+#rom,#sav{
+display:none;
+}
 </style>
 </head>
 
 <body>
 
 <div id="menu">
-<button onclick="rom.click()">ROM</button>
-<button onclick="sav.click()">SAV</button>
-<button onclick="downloadSav()">↓SAV</button>
-<button onclick="fullscreen()">FULL</button>
+
+<button onclick="rom.click()">
+ROM
+</button>
+
+<button onclick="sav.click()">
+SAV
+</button>
+
+<button onclick="downloadSav()">
+↓SAV
+</button>
+
+<button onclick="fullscreen()">
+FULL
+</button>
+
 </div>
 
-<input id="rom" type="file" accept=".gb,.gbc,.gba">
-<input id="sav" type="file" accept=".sav">
+<input
+id="rom"
+type="file"
+accept=".gb,.gbc,.gba,.smc,.sfc"
+>
+
+<input
+id="sav"
+type="file"
+accept=".sav,.srm"
+>
 
 <div id="game"></div>
 
