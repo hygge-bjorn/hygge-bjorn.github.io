@@ -1,9 +1,8 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>Emulator</title>
 
 <style>
@@ -57,7 +56,6 @@ display:none;
 <div id="menu">
 <button onclick="rom.click()">ROM</button>
 <button onclick="sav.click()">SAV</button>
-<button onclick="downloadSav()">↓SAV</button>
 <button onclick="fullscreen()">FULL</button>
 </div>
 
@@ -70,9 +68,8 @@ display:none;
 const rom = document.getElementById("rom");
 const sav = document.getElementById("sav");
 
-let game = "";
 let blobUrl = null;
-let latestSave = null;
+let emulatorLoaded = false;
 
 function setCore(name){
     name = name.toLowerCase();
@@ -82,14 +79,9 @@ function setCore(name){
         return "gba";
     }
 
-    if(name.endsWith(".gb")){
+    if(name.endsWith(".gb") || name.endsWith(".gbc")){
         window.EJS_core = "gb";
         return "gb";
-    }
-
-    if(name.endsWith(".gbc")){
-        window.EJS_core = "gb";
-        return "gbc";
     }
 
     if(name.endsWith(".smc") || name.endsWith(".sfc")){
@@ -101,6 +93,7 @@ function setCore(name){
 }
 
 function clean(){
+
     const old = document.getElementById("emulatorjs");
     if(old) old.remove();
 
@@ -111,13 +104,13 @@ function clean(){
         blobUrl = null;
     }
 
-    latestSave = null;
+    window.EJS_emulator = null;
+    window.EJS_gameUrl = null;
+    window.EJS_player = null;
 }
 
 function load(file){
     if(!file) return;
-
-    game = file.name;
 
     clean();
 
@@ -138,9 +131,13 @@ function load(file){
 
         window.EJS_player = "#game";
         window.EJS_gameUrl = blobUrl;
-        window.EJS_gameName = game;
+        window.EJS_gameName = file.name;
         window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
         window.EJS_startOnLoaded = true;
+
+        // IMPORTANT: only allow ONE loader instance
+        const oldScript = document.getElementById("emulatorjs");
+        if(oldScript) oldScript.remove();
 
         const script = document.createElement("script");
         script.id = "emulatorjs";
