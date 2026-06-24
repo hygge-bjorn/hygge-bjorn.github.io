@@ -4,12 +4,20 @@ let blobUrl = null;
 let scriptLoaded = false;
 
 function cleanup(){
+
+const old = document.getElementById("emu");
+if(old) old.remove();
+
 document.getElementById("game").innerHTML = "";
 
 if(blobUrl){
 URL.revokeObjectURL(blobUrl);
 blobUrl = null;
 }
+
+window.EJS_emulator = null;
+window.EJS_gameUrl = null;
+window.EJS_player = null;
 }
 
 function load(file){
@@ -19,9 +27,9 @@ cleanup();
 
 const name = file.name.toLowerCase();
 
-// ONLY GB/GBC (important for iPhone stability)
+// iPhone-safe only
 if(!(name.endsWith(".gb") || name.endsWith(".gbc"))){
-alert("Only GB/GBC supported on iPhone");
+alert("Only GB/GBC supported");
 return;
 }
 
@@ -31,36 +39,40 @@ reader.onload = () => {
 
 blobUrl = URL.createObjectURL(new Blob([reader.result]));
 
-// IMPORTANT: set BEFORE loading script
+// IMPORTANT: config BEFORE loader
 window.EJS_player = "#game";
 window.EJS_gameUrl = blobUrl;
 window.EJS_gameName = file.name;
-window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+
+// FIXED CDN (important for iPhone stability)
+window.EJS_pathtodata = "https://cdn.emulatorjs.org/latest/data/";
+
+// GB core only (stable on iPhone)
 window.EJS_core = "gb";
+
+// iOS stability flags
+window.EJS_disableDatabases = true;
+window.EJS_threads = 1;
 window.EJS_startOnLoaded = true;
 
-// remove old script completely
+// prevent duplicate crashes
 const old = document.getElementById("emu");
 if(old) old.remove();
 
-// FORCE fresh load (iOS fix)
 setTimeout(() => {
 
 const script = document.createElement("script");
 script.id = "emu";
-script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
-
-script.onload = () => {
-scriptLoaded = true;
-};
+script.src = "https://cdn.emulatorjs.org/latest/data/loader.js";
 
 script.onerror = () => {
-alert("Failed to load emulator");
+alert("Emulator failed to load (CDN/WebGL issue)");
 };
 
 document.body.appendChild(script);
 
 }, 50);
+
 };
 
 reader.readAsArrayBuffer(file);
@@ -69,6 +81,7 @@ reader.readAsArrayBuffer(file);
 rom.onchange = e => load(e.target.files[0]);
 
 document.body.ondragover = e => e.preventDefault();
+
 document.body.ondrop = e => {
 e.preventDefault();
 load(e.dataTransfer.files[0]);
