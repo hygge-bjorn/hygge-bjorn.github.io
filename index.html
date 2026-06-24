@@ -2,8 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Emulator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GBC Emulator</title>
 
 <style>
 html,body{
@@ -16,7 +16,7 @@ font-family:sans-serif;
 
 #game{
 width:100vw;
-height:100dvh;
+height:100vh;
 background:black;
 }
 
@@ -26,8 +26,8 @@ top:10px;
 left:10px;
 z-index:999;
 display:flex;
-gap:5px;
-opacity:.3;
+gap:6px;
+opacity:.4;
 transition:.2s;
 }
 
@@ -37,15 +37,14 @@ opacity:1;
 
 button{
 border:none;
-padding:8px;
+padding:10px;
 background:#222;
 color:white;
 border-radius:8px;
 font-size:14px;
-cursor:pointer;
 }
 
-#rom,#sav{
+#rom{
 display:none;
 }
 </style>
@@ -54,118 +53,111 @@ display:none;
 <body>
 
 <div id="menu">
-<button onclick="rom.click()">ROM</button>
-<button onclick="sav.click()">SAV</button>
+<button onclick="document.getElementById('rom').click()">ROM</button>
 <button onclick="fullscreen()">FULL</button>
 </div>
 
-<input id="rom" type="file" accept=".gb,.gbc,.gba,.smc,.sfc">
-<input id="sav" type="file" accept=".sav,.srm">
+<input id="rom" type="file" accept=".gb,.gbc">
 
 <div id="game"></div>
 
 <script>
 const rom = document.getElementById("rom");
-const sav = document.getElementById("sav");
 
 let blobUrl = null;
 let emulatorLoaded = false;
 
-function setCore(name){
-    name = name.toLowerCase();
+function cleanup(){
 
-    if(name.endsWith(".gba")){
-        window.EJS_core = "mgba";
-        return "gba";
-    }
+const old = document.getElementById("emulatorjs");
+if(old) old.remove();
 
-    if(name.endsWith(".gb") || name.endsWith(".gbc")){
-        window.EJS_core = "gb";
-        return "gb";
-    }
+document.getElementById("game").innerHTML = "";
 
-    if(name.endsWith(".smc") || name.endsWith(".sfc")){
-        window.EJS_core = "snes";
-        return "snes";
-    }
-
-    return null;
+if(blobUrl){
+URL.revokeObjectURL(blobUrl);
+blobUrl = null;
 }
 
-function clean(){
+window.EJS_emulator = null;
+window.EJS_gameUrl = null;
+window.EJS_player = null;
+}
 
-    const old = document.getElementById("emulatorjs");
-    if(old) old.remove();
+function setCore(name){
+name = name.toLowerCase();
 
-    document.getElementById("game").innerHTML = "";
+if(name.endsWith(".gb") || name.endsWith(".gbc")){
+window.EJS_core = "gb";
+return true;
+}
 
-    if(blobUrl){
-        URL.revokeObjectURL(blobUrl);
-        blobUrl = null;
-    }
-
-    window.EJS_emulator = null;
-    window.EJS_gameUrl = null;
-    window.EJS_player = null;
+return false;
 }
 
 function load(file){
-    if(!file) return;
+if(!file) return;
 
-    clean();
+cleanup();
 
-    const type = setCore(file.name);
-
-    if(!type){
-        alert("Unsupported ROM");
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-
-        blobUrl = URL.createObjectURL(
-            new Blob([reader.result])
-        );
-
-        window.EJS_player = "#game";
-        window.EJS_gameUrl = blobUrl;
-        window.EJS_gameName = file.name;
-        window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-        window.EJS_startOnLoaded = true;
-
-        // IMPORTANT: only allow ONE loader instance
-        const oldScript = document.getElementById("emulatorjs");
-        if(oldScript) oldScript.remove();
-
-        const script = document.createElement("script");
-        script.id = "emulatorjs";
-        script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
-
-        script.onerror = () => {
-            alert("Failed to load EmulatorJS");
-        };
-
-        document.body.appendChild(script);
-    };
-
-    reader.readAsArrayBuffer(file);
+if(!setCore(file.name)){
+alert("Only GB/GBC supported on iPhone");
+return;
 }
 
-// ROM load
-rom.onchange = e => load(e.target.files[0]);
+const reader = new FileReader();
 
-// drag & drop
-document.body.ondragover = e => e.preventDefault();
-document.body.ondrop = e => {
-    e.preventDefault();
-    load(e.dataTransfer.files[0]);
+reader.onload = () => {
+
+blobUrl = URL.createObjectURL(
+new Blob([reader.result])
+);
+
+// iOS-safe config
+window.EJS_player = "#game";
+window.EJS_gameUrl = blobUrl;
+window.EJS_gameName = file.name;
+window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+window.EJS_startOnLoaded = true;
+
+// iOS performance safety flags
+window.EJS_disableDatabases = true;
+window.EJS_threads = 1;
+
+// prevent double-loading
+if(emulatorLoaded){
+cleanup();
+}
+
+emulatorLoaded = true;
+
+const old = document.getElementById("emulatorjs");
+if(old) old.remove();
+
+const script = document.createElement("script");
+script.id = "emulatorjs";
+script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+
+script.onerror = () => {
+alert("Emulator failed to load");
 };
 
-// fullscreen
+document.body.appendChild(script);
+};
+
+reader.readAsArrayBuffer(file);
+}
+
+rom.onchange = e => load(e.target.files[0]);
+
+document.body.ondragover = e => e.preventDefault();
+document.body.ondrop = e => {
+e.preventDefault();
+load(e.dataTransfer.files[0]);
+};
+
 function fullscreen(){
-    document.getElementById("game").requestFullscreen();
+document.getElementById("game").requestFullscreen();
 }
 </script>
 
