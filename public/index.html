@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Browser Hub</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131a26;
+            --accent-color: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.4);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 40px 20px;
+            text-align: center;
+            z-index: 2;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #a5b4fc, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 35px;
+            font-size: 1rem;
+        }
+
+        .search-box {
+            background-color: var(--card-bg);
+            padding: 8px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 25px var(--accent-glow);
+        }
+
+        .search-box input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            padding: 12px 20px;
+            color: var(--text-main);
+            font-size: 1.1rem;
+        }
+
+        .search-box input::placeholder {
+            color: #4b5563;
+        }
+
+        .search-box button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            outline: none;
+            padding: 12px 28px;
+            border-radius: 9999px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .search-box button:hover {
+            background-color: #4338ca;
+        }
+
+        .search-box button:active {
+            transform: scale(0.98);
+        }
+
+        /* Ambient background glow dots */
+        .glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow"></div>
+
+    <div class="container">
+        <h1>Web Hub</h1>
+        <p>Enter a URL or search query securely</p>
+        
+        <form id="proxy-form" action="/uv/service/" method="POST">
+            <div class="search-box">
+                <input type="text" id="url-input" placeholder="Search Google or type a URL..." required autocomplete="off">
+                <button type="submit">Go</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('proxy-form');
+        const input = document.getElementById('url-input');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            let url = input.value.trim();
+            
+            // If it doesn't look like a URL, treat it as a Google search query
+            if (!url.includes('.') || url.includes(' ')) {
+                url = 'https://google.com' + encodeURIComponent(url);
+            } else if (!/^https?:\/\//i.test(url)) {
+                // If it looks like a domain but lacks http/https, prepend it
+                url = 'https://' + url;
+            }
+
+            // Encode the URL using basic XOR ( standard for Ultraviolet configurations )
+            const encodedUrl = __uv$config.prefix + __uv$config.encodeUrl(url);
+            
+            // Redirect the browser window to the proxy link
+            window.location.href = encodedUrl;
+        });
+    </script>
+</body>
+</html>
