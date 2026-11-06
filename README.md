@@ -7,7 +7,7 @@ Build the ultimate brick-busting machine to destroy billions of bricks. Idle bre
 
 Want to join the action?
 
-[Click here to start playing!](https://sobloxsy.com/playgame.html?id=7)
+[Click here to start playing!]()
 
 ## Import code generator
 Yes you saw that right! This has a built in import code generator to boost progress!<br>
